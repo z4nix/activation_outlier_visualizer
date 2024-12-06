@@ -13,6 +13,6 @@ server
 maxUploadSize = 200
 
 [
-runner
+browser
 ]
-fastReruns = true
+gatherUsageStats = false
