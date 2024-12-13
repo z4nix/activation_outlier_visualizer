@@ -3,12 +3,25 @@ import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
 import pickle
+import os
+from pathlib import Path
 
 st.set_page_config(page_title="Model Statistics Visualizer", layout="wide")
 
-def load_stats_file(file):
-    """Load processed statistics from an uploaded pickle file"""
-    return pickle.load(file)
+def get_example_files():
+    """Get list of example pickle files from the examples directory"""
+    examples_dir = Path("examples")
+    if not examples_dir.exists():
+        return []
+    return sorted([f for f in examples_dir.glob("*.pkl")])
+
+def load_stats_file(file_path):
+    """Load processed statistics from a pickle file path or uploaded file"""
+    if isinstance(file_path, (str, Path)):
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
+    else:
+        return pickle.load(file_path)
 
 def get_readable_name(metric):
     """Convert metric name to readable format"""
@@ -87,16 +100,38 @@ def main():
     # Add description
     st.write("""
     This tool visualizes neural network model statistics in 3D. 
-    Upload a pickle file containing your model statistics to begin.
+    Either select an example file from the examples directory or upload your own statistics file.
     """)
     
-    # File upload
-    uploaded_file = st.file_uploader("Choose a statistics file", type=['pkl'])
+    # Get example files
+    example_files = get_example_files()
     
-    if uploaded_file is not None:
+    # Create two columns for file selection
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Select Example File")
+        if example_files:
+            selected_example = st.selectbox(
+                "Choose an example file",
+                options=example_files,
+                format_func=lambda x: x.name
+            )
+        else:
+            st.warning("No example files found in the 'examples' directory")
+            selected_example = None
+    
+    with col2:
+        st.subheader("Or Upload Your Own File")
+        uploaded_file = st.file_uploader("Choose a statistics file", type=['pkl'])
+    
+    # Use either the selected example or uploaded file
+    file_to_process = uploaded_file if uploaded_file is not None else selected_example
+    
+    if file_to_process is not None:
         try:
             # Load the statistics
-            processed_data = load_stats_file(uploaded_file)
+            processed_data = load_stats_file(file_to_process)
             
             # Sidebar controls
             with st.sidebar:
@@ -152,14 +187,14 @@ def main():
             
             Make sure your pickle file contains statistics in the correct format:
             ```python
-            {
-                'component_name': {
-                    'metric_name': {
+            {{
+                'component_name': {{
+                    'metric_name': {{
                         'data': numpy.ndarray,  # Shape: [layers, channels]
                         'valid_layers': list    # List of layer indices
-                    }
-                }
-            }
+                    }}
+                }}
+            }}
             ```
             """)
 
