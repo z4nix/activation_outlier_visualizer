@@ -10,7 +10,7 @@ st.set_page_config(page_title="Model Statistics Visualizer", layout="wide")
 
 def get_example_files():
     """Get list of example pickle files from the examples directory"""
-    examples_dir = Path("examples")
+    examples_dir = Path("example")
     if not examples_dir.exists():
         return []
     return sorted([f for f in examples_dir.glob("*.pkl")])
