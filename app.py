@@ -28,7 +28,7 @@ def get_readable_name(metric):
     name = metric.replace('_std_per_channel', '')
     name = name.replace('_recorder', '')
     name = name.replace('_', ' ')
-    return name.()
+    return name.title()
 
 def create_visualization(processed_data, component, metric, std_threshold, subsample_factor):
     """Create the 3D visualization"""
@@ -59,12 +59,12 @@ def create_visualization(processed_data, component, metric, std_threshold, subsa
                 cmin=0,
                 cmax=std_threshold,
                 colorbar=dict(
-                title=dict(
-                    text='σ',
-                    side='right'
-                ),
-    ticksuffix='σ'
-)
+                    title=dict(
+                        text='σ',
+                        side='right'
+                    ),
+                    ticksuffix='σ'
+                )
             )
         ])
         
