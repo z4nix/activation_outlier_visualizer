@@ -37,52 +37,13 @@ def create_visualization(processed_data, component, metric, std_threshold, subsa
         data = metric_data['data']
         valid_layers = metric_data['valid_layers']
         
-        # Convert data to numpy array if it's a list (for compatibility with new exporter format)
-        if isinstance(data, list):
-            st.info("Converting list data to numpy array format")
-            # Check if all elements in the list have the same length
-            if len(data) > 0 and all(isinstance(row, list) and len(row) == len(data[0]) for row in data):
-                data = np.array(data)
-            else:
-                # Handle variable length lists by finding max length and padding
-                max_len = max(len(row) if isinstance(row, list) else 1 for row in data)
-                padded_data = []
-                for row in data:
-                    if isinstance(row, list):
-                        # Pad shorter rows with zeros
-                        padded_row = row + [0] * (max_len - len(row))
-                        padded_data.append(padded_row)
-                    else:
-                        # Handle scalar values
-                        padded_data.append([row] + [0] * (max_len - 1))
-                data = np.array(padded_data)
-                st.info(f"Padded variable length lists to consistent shape {data.shape}")
-        
         # Subsample data
         output_size = data.shape[1]
         x_data = np.arange(0, output_size, subsample_factor)
-        
-        # Handle empty or small datasets
-        if subsample_factor >= output_size:
-            z_data = data  # Don't subsample if factor is bigger than data size
-            x_data = np.arange(output_size)
-        else:
-            z_data = data[:, ::subsample_factor]
+        z_data = data[:, ::subsample_factor]
         
         # Create meshgrid
         X, Y = np.meshgrid(x_data, valid_layers)
-        
-        # If data shapes don't match (sometimes happens with irregular data)
-        if X.shape != Y.shape or X.shape[0] != z_data.shape[0] or X.shape[1] != z_data.shape[1]:
-            st.warning(f"Shape mismatch: X={X.shape}, Y={Y.shape}, Z={z_data.shape}. Fixing...")
-            
-            # Create consistent shapes
-            min_rows = min(X.shape[0], z_data.shape[0])
-            min_cols = min(X.shape[1], z_data.shape[1])
-            
-            X = X[:min_rows, :min_cols]
-            Y = Y[:min_rows, :min_cols]
-            z_data = z_data[:min_rows, :min_cols]
         
         # Create the 3D surface plot
         fig = go.Figure(data=[
@@ -133,7 +94,6 @@ def create_visualization(processed_data, component, metric, std_threshold, subsa
         return fig
     except Exception as e:
         st.error(f"Error creating visualization: {str(e)}")
-        st.exception(e)  # Show the full traceback for debugging
         return None
 
 def main():
@@ -175,12 +135,6 @@ def main():
             # Load the statistics
             processed_data = load_stats_file(file_to_process)
             
-            # Display file info
-            st.info(f"Successfully loaded file{'s' if isinstance(file_to_process, str) else ''} {'from: ' + os.path.basename(file_to_process) if isinstance(file_to_process, str) else ''}")
-            
-            # Show components found
-            st.write(f"Found {len(processed_data)} components: {', '.join(processed_data.keys())}")
-            
             # Sidebar controls
             with st.sidebar:
                 st.header("Visualization Controls")
@@ -216,26 +170,6 @@ def main():
                     value=8,
                     step=1
                 )
-                
-                # Display information about the selected data
-                if metric in processed_data[component]:
-                    metric_data = processed_data[component][metric]
-                    st.write("#### Data Information")
-                    
-                    # Show data type
-                    data_type = type(metric_data['data']).__name__
-                    st.write(f"Data type: `{data_type}`")
-                    
-                    # Show shape information
-                    if hasattr(metric_data['data'], 'shape'):
-                        st.write(f"Shape: {metric_data['data'].shape}")
-                    elif isinstance(metric_data['data'], list) and len(metric_data['data']) > 0:
-                        st.write(f"Layers: {len(metric_data['data'])}")
-                        if isinstance(metric_data['data'][0], list):
-                            st.write(f"First layer length: {len(metric_data['data'][0])}")
-                    
-                    # Show valid layers
-                    st.write(f"Valid layers: {len(metric_data['valid_layers'])}")
             
             # Create and display visualization
             fig = create_visualization(
@@ -258,14 +192,13 @@ def main():
             {{
                 'component_name': {{
                     'metric_name': {{
-                        'data': numpy.ndarray or list,  # Shape: [layers, channels]
+                        'data': numpy.ndarray,  # Shape: [layers, channels]
                         'valid_layers': list    # List of layer indices
                     }}
                 }}
             }}
             ```
             """)
-            st.exception(e)  # Show the full traceback for debugging
 
 if __name__ == "__main__":
     main()
