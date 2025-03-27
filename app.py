@@ -24,23 +24,16 @@ def load_stats_file(file_path):
         else:
             data = pickle.load(file_path)
         
-        # Ensure all data is in numpy array format
+        # Convert lists to numpy arrays where needed
         for component in data:
             for metric in data[component]:
                 if 'data' in data[component][metric]:
-                    metric_data = data[component][metric]['data']
-                    
-                    # If it's a list, try to convert to numpy array
-                    if isinstance(metric_data, list):
+                    # Convert list to numpy array if needed
+                    if isinstance(data[component][metric]['data'], list):
                         try:
-                            # Convert the list to a numpy array
-                            data[component][metric]['data'] = np.array(metric_data)
+                            data[component][metric]['data'] = np.array(data[component][metric]['data'])
                         except Exception as e:
-                            st.warning(f"Couldn't convert {component}.{metric} to numpy array: {str(e)}")
-                            # If conversion fails, ensure each element is at least a numpy array
-                            for i, item in enumerate(metric_data):
-                                if isinstance(item, list):
-                                    metric_data[i] = np.array(item)
+                            st.warning(f"Warning: Could not convert {component}.{metric} to numpy array: {e}")
         
         return data
     except Exception as e:
@@ -57,33 +50,17 @@ def get_readable_name(metric):
 def create_visualization(processed_data, component, metric, std_threshold, subsample_factor):
     """Create the 3D visualization"""
     try:
-        if component not in processed_data or metric not in processed_data[component]:
-            st.error(f"Component '{component}' or metric '{metric}' not found in the data")
-            return None
-            
         metric_data = processed_data[component][metric]
-        if 'data' not in metric_data or 'valid_layers' not in metric_data:
-            st.error(f"Invalid data structure for {component}.{metric}")
-            return None
-            
         data = metric_data['data']
         valid_layers = metric_data['valid_layers']
         
-        # Convert to numpy array if still a list
+        # Convert list to numpy array if needed
         if isinstance(data, list):
             try:
                 data = np.array(data)
             except Exception as e:
-                st.error(f"Cannot convert data to numpy array: {e}")
+                st.error(f"Could not convert data to numpy array: {e}")
                 return None
-        
-        # Debug information
-        st.info(f"Data shape: {data.shape}, Valid layers: {len(valid_layers)}")
-        
-        # Make sure data is 2D (layers x channels)
-        if len(data.shape) != 2:
-            st.error(f"Data shape is {data.shape}, expected 2D array (layers x channels)")
-            return None
         
         # Subsample data
         output_size = data.shape[1]
@@ -142,7 +119,6 @@ def create_visualization(processed_data, component, metric, std_threshold, subsa
         return fig
     except Exception as e:
         st.error(f"Error creating visualization: {str(e)}")
-        st.error(f"Error details: {type(e).__name__} at line {e.__traceback__.tb_lineno}")
         return None
 
 def main():
@@ -184,16 +160,6 @@ def main():
             # Load the statistics
             processed_data = load_stats_file(file_to_process)
             
-            if processed_data is None:
-                st.error("Failed to load statistics from the file")
-                return
-                
-            # Display available components
-            components = list(processed_data.keys())
-            if not components:
-                st.error("No components found in the data")
-                return
-                
             # Sidebar controls
             with st.sidebar:
                 st.header("Visualization Controls")
@@ -201,15 +167,11 @@ def main():
                 # Component selection
                 component = st.selectbox(
                     "Select Component",
-                    options=components
+                    options=list(processed_data.keys())
                 )
                 
                 # Metric selection
                 metrics = list(processed_data[component].keys())
-                if not metrics:
-                    st.error(f"No metrics found for component '{component}'")
-                    return
-                    
                 metric = st.selectbox(
                     "Select Metric",
                     options=metrics,
@@ -245,8 +207,6 @@ def main():
             
             if fig is not None:
                 st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.error("Failed to create visualization")
         
         except Exception as e:
             st.error(f"""
