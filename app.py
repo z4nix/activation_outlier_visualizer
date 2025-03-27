@@ -19,9 +19,18 @@ def load_stats_file(file_path):
     """Load processed statistics from a pickle file path or uploaded file"""
     if isinstance(file_path, (str, Path)):
         with open(file_path, 'rb') as f:
-            return pickle.load(f)
+            data = pickle.load(f)
     else:
-        return pickle.load(file_path)
+        data = pickle.load(file_path)
+    
+    # Convert lists to numpy arrays where needed
+    for component in data:
+        for metric in data[component]:
+            if 'data' in data[component][metric]:
+                # Convert list of layer data to numpy array
+                data[component][metric]['data'] = np.array(data[component][metric]['data'])
+    
+    return data
 
 def get_readable_name(metric):
     """Convert metric name to readable format"""
