@@ -17,28 +17,11 @@ def get_example_files():
 
 def load_stats_file(file_path):
     """Load processed statistics from a pickle file path or uploaded file"""
-    try:
-        if isinstance(file_path, (str, Path)):
-            with open(file_path, 'rb') as f:
-                data = pickle.load(f)
-        else:
-            data = pickle.load(file_path)
-        
-        # Convert lists to numpy arrays where needed
-        for component in data:
-            for metric in data[component]:
-                if 'data' in data[component][metric]:
-                    # Convert list to numpy array if needed
-                    if isinstance(data[component][metric]['data'], list):
-                        try:
-                            data[component][metric]['data'] = np.array(data[component][metric]['data'])
-                        except Exception as e:
-                            st.warning(f"Warning: Could not convert {component}.{metric} to numpy array: {e}")
-        
-        return data
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return None
+    if isinstance(file_path, (str, Path)):
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
+    else:
+        return pickle.load(file_path)
 
 def get_readable_name(metric):
     """Convert metric name to readable format"""
@@ -53,14 +36,6 @@ def create_visualization(processed_data, component, metric, std_threshold, subsa
         metric_data = processed_data[component][metric]
         data = metric_data['data']
         valid_layers = metric_data['valid_layers']
-        
-        # Convert list to numpy array if needed
-        if isinstance(data, list):
-            try:
-                data = np.array(data)
-            except Exception as e:
-                st.error(f"Could not convert data to numpy array: {e}")
-                return None
         
         # Subsample data
         output_size = data.shape[1]
